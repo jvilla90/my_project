@@ -10,11 +10,6 @@
 source("useful_functions.R")
 
 library(haven)
-
-load("analysis/input/34363-0001-Data.rda")
-
-sjs <- read_sav("SJSData.sav")
-
-write_sav(sjs, "SJSData.sav")
+sjs <- read_sav("input/SJSData.sav")
 
 
