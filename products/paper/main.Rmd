@@ -1,37 +1,280 @@
 ---
+title: Educational Attainment and Attitudes About Racism in the LGBTQ Community Among LGBTQ
+  People of Color
+author: "Janeth Villa"
+date: "June 12, 2019"
 output:
-  pdf_document:
-    citation_package: natbib
-    fig_caption: yes
-    template: ./resources/aog-latex-ms.tex
-  word_document:
-    reference_docx: ./resources/aog_word_style.docx
-fontfamily: mathpazo
-fontsize: 11pt
-anonymous: false
-endnotes: false
-pagenumber: 1
-bibliography: ../project.bib
-biblio-style: ./resources/ajs.bst
-title: "The Title"
-author:
-- affiliation: University of Oregon, Sociology
-  name: Aaron Gullickson
-- affiliation: Some Research University
-  name: My co-author
-keywords: keywords
-thanks: Thanks to people and stuff
-abstract: This is a test abstract
+  pdf_document: default
+  html_document: default
 ---
 
-# Introduction
+```{r setup, include=FALSE}
 
-# Background
+library(haven)
+SJS <- read_sav("~/Desktop/Winter 2019/Stats 1/sjs_project/analysis/input/SJSData.sav")
 
-# Data and Methods
 
-# Results
+r = getOption("repos")
+r["CRAN"] = "http://cran.us.r-project.org"
+options(repos = r)
+install.packages("SJS")
 
-# Conclusions
+
+
+require(stargazer)
+require(survey)
+if(!require(psych)){install.packages("psych")}
+if(!require(cluster)){install.packages("cluster")}
+if(!require(fpc)){install.packages("fpc")}
+
+```
+
+
+#Introduction
+
+
+Being part of two stigmatized groups, LGBTQ people of color experience marginalization within both their racial/ethnic communities and the mainstream LGBTQ community. There is evidence that the mainstream LGBT community, movement, and organizations remain normatvely white despite appeals to diversity (Ward 2008) and tend not to meet unique needs of LGBTQ people of color (Acosta 2014; Alimahomed 2012; Moore 2011; Ocampo 2014). While previous studies show that queer people of color may experience discomfort and exclusion in relation to the broader LGBT movement and organizations, little is known about which factors contribute to LGBT POCs racial discomfort in these spaces and their attitudes about the ways mainstream LGBTQ organizations address issues of race. This project tests whether level of education is associated with racial discomfort and beliefs about mainstream LGBT organizations' handling of racial issues among LGBTQ people of color. Educational attainment was chosen as the independent variable because there is some evidence that educaitonal attainment among nonwhites is associated with with increased racial consciousness and politicized views on race (Wodtke 2012).
+
+My main questions are: What is the relationship between level of education and racial discomfort in the general LGBT commuity among LGBTQ people of color? Also, what is the relationship between level of education and beliefs about whether mainstream LGBT organizations are adequately addressing racial issues among LGBTQ people of color?
+
+
+
+
+
+```{r recode, echo=FALSE, include=FALSE, warning=FALSE, message="FALSE", fig.cap="caption"}
+
+#recode independent variable 1 (level of education)
+
+SJS$educ[SJS$q22a=="REFUSED/BLANK"] <- NA
+SJS$educ[SJS$q22a=="1"]<- "Less than HS"
+SJS$educ[SJS$q22a=="2"]<- "HS"
+SJS$educ[SJS$q22a=="3"|
+           SJS$q22a=="4"]<- "Some college"
+SJS$educ[SJS$q22a=="5"]<- "Bachelors"
+SJS$educ[SJS$q22a=="6" |
+     SJS$q22a== "7"]<- "Grad educ"
+
+SJS$educ<- factor(SJS$educ, levels=c("Less than HS","HS","Some college", 
+                                     "Bachelors","Grad educ"))
+
+
+#recode dependent variable 2 (belief that mainstream LGBT organizations are/are not doing enough work on racial equality)
+
+SJS$racialeq[SJS$q7a=="REFUSED/BLANK"]<- NA
+SJS$racialeq[SJS$q7a=="1"]<- "Not doing enough"
+SJS$racialeq[SJS$q7a=="2"]<- "Doing enough"
+
+
+SJS$racialeq<- factor(SJS$racialeq, levels=c("Not doing enough","Doing enough"))
+
+
+#recode dependent variable 3 (level of comfort/discomfort in LGBT community bc of race)
+
+SJS$comfort[SJS$q15b=="REFUSED/BLANK"]<- NA
+SJS$comfort[SJS$q15b=="1"|
+              SJS$q15b=="2"]<-"Comfortable"
+SJS$comfort[SJS$q15b=="5"|
+              SJS$q15b=="6"]<-"Uncomfortable"
+SJS$comfort<- factor(SJS$comfort, levels=c("Comfortable",
+                                           "Uncomfortable"))
+
+
+
+#recode control variables
+
+#age
+SJS$age[SJS$q18g=="REFUSED/BLANK"]<- NA
+SJS$age[SJS$q18g=="1919"| SJS$q18g=="1920"| SJS$q18g=="1921"| SJS$q18g=="1922"| SJS$q18g=="1923"|
+         SJS$q18g=="1924"| SJS$q18g=="1925"| SJS$q18g=="1926"| SJS$q18g=="1927"| SJS$q18g=="1928"|
+          SJS$q18g=="1929"| SJS$q18g=="1930"| SJS$q18g=="1931"| SJS$q18g=="1932"| SJS$q18g=="1933"
+        | SJS$q18g=="1934"| SJS$q18g=="1935"| SJS$q18g=="1936"| SJS$q18g=="1937"| SJS$q18g=="1938"|   SJS$q18g=="1939"| SJS$q18g=="1940"]<- "Silent generation"
+
+SJS$age[SJS$q18g=="1941"|SJS$q18g=="1942"|SJS$q18g=="1943"|SJS$q18g=="1944"|SJS$q18g=="1945"|SJS$q18g=="1946"|SJS$q18g=="1947"|SJS$q18g=="1948"|SJS$q18g=="1949"|SJS$q18g=="1950"|SJS$q18g=="1951"|SJS$q18g=="1952"|SJS$q18g=="1953"|SJS$q18g=="1954"|SJS$q18g=="1955"|SJS$q18g=="1956"|SJS$q18g=="1957"|SJS$q18g=="1958"|
+          SJS$q18g=="1959"|SJS$q18g=="1960"|SJS$q18g=="1961"|SJS$q18g=="1962"|SJS$q18g=="1963"|
+          SJS$q18g=="1964"]<-"Baby boomer"
+
+SJS$age[SJS$q18g=="1965"|SJS$q18g=="1966"|SJS$q18g=="1967"|SJS$q18g=="1968"|SJS$q18g=="1969"|
+          SJS$q18g=="1970"|SJS$q18g=="1971"|SJS$q18g=="1972"|SJS$q18g=="1973"|SJS$q18g=="1974"|
+          SJS$q18g=="1975"|SJS$q18g=="1976"|SJS$q18g=="1977"|SJS$q18g=="1978"|SJS$q18g=="1979"]<-"Gen X"
+SJS$age[SJS$q18g=="1980"|SJS$q18g=="1981"|SJS$q18g=="1982"|SJS$q18g=="1983"|SJS$q18g=="1984"|SJS$q18g=="1985"|SJS$q18g=="1986"|SJS$q18g=="1987"|SJS$q18g=="1988"|SJS$q18g=="1989"|SJS$q18g=="1990"|SJS$q18g=="1991"|
+          SJS$q18g=="1992"|SJS$q18g=="1993"|SJS$q18g=="1994"]<- "Millenial"
+
+SJS$age[SJS$q18g=="1995"|SJS$q18g=="1996"|SJS$q18g=="1997"|SJS$q18g=="1998"]<-"Gen Z"
+
+SJS$age<- factor(SJS$age, levels=c("Silent generation","Baby boomer",
+                                           "Gen X","Millenial","Gen Z"))
+
+
+#race
+
+SJS$race[SJS$q19a1=="1"]<-"Black"
+SJS$race[SJS$q19a2=="1"]<-"Latinx"
+SJS$race[SJS$q19a3=="1"]<-"API"
+SJS$race[SJS$q19a4=="1"]<-"Native"
+SJS$race[SJS$q19a6=="1"]<-"Multiracial"
+SJS$race<- factor(SJS$race, levels=c("Black","Latinx",
+                                           "API","Native","Multiracial"))
+
+#gender
+SJS$gender[SJS$q18a1=="1"]<-"Men"
+SJS$gender[SJS$q18a2=="1"]<-"Women"
+SJS$gender[SJS$q18a3=="1"]<-"Trans mtf"
+SJS$gender[SJS$q18a4=="1"]<-"Trans ftm"
+SJS$gender[SJS$q18a5=="1"]<-"Other"
+SJS$gender<- factor(SJS$gender, levels=c("Men","Women","Trans mtf","Trans ftm",
+                                         "Other"))
+
+#political views
+SJS$politics[SJS$q21a=="REFUSED/BLANK"]<- NA
+SJS$politics[SJS$q21a=="1"]<-"Very liberal"
+SJS$politics[SJS$q21a=="2"]<-"Liberal"
+SJS$politics[SJS$q21a=="3"]<-"Slightly liberal"
+SJS$politics[SJS$q21a=="4"]<-"Slightly conservative"
+SJS$politics[SJS$q21a=="5"]<-"Conservative"
+SJS$politics[SJS$q21a=="6"]<-"Very conservative"
+SJS$politics<- factor(SJS$politics, levels=c("Very liberal","Liberal","Slightly liberal","Slightly conservative","Conservative","Very conservative"))
+```
+
+
+#Data and Methods
+
+The Social Justice Sexuality Project (SJS) is one of the largest national surveys of Black, Latina/o, Asian and Pacific Islander, Native, and multiracial lesbian, gay, bisexual, and transgender (LGBT) people. With over 5,000 respondents, the final sample includes respondents from all 50 states, in rural and suburban areas, in addition to large urban areas; and from a variety of ages, racial/ethnic identities, sexual orientations, and gender identities. The survey investigates the sociopolitical experiences of this population around five themes: racial and sexual identity; spirituality and religion; mental and physical health; family formations and dynamics; civic and community engagement. Demographic variables include: race/ethnicity, sexual orientation, gender identity, age, education, religion, household, income, height, weight, location, birthplace, and political affiliation.
+
+SJS survey data was collected using venue-based sampling at strategic events, snowball sampling, respondent-driven sampling, and the internet. Because this data set is not nationally representative, it is not weighted. 
+
+There are two dependent variables in this study. The first is level of racial discomfort in their LGBT community. This variable measures the answer to this question: How often have you felt uncomfortable in your LGBT community because of your race or ethnicity? Answer options on the survey present a six-point scale (1=Never and 6=Always). For simplicity, I recoded this variable to be dichotomous (1-2=Comfortbale, 5-6= Uncomfortable).  NA's and 3-4 were omitted because I am interested in those who reported feeling either sttongly comfortable or uncomfortable. While it is not ideal to collapse an ordinal variable into a dichotomous one while omitting some responses, I felt I could still identify patterns this way, particularly among those respondents who felt more strongly comfortable or uncomfortable.
+
+The second dependent variable is attitudes about the ways mainstream LGBTQ organizations address issues of race. This variable measures the answer to this question: To what degree are mainstream LGBT organizations addressing issues of racial equality? There were three answer options: 1) Not doing enough, 2) Doing just the right amount and 3) Doing too much. To recode this variable I omitted "Doing too much" since it only made up a small proportion of responses and turned it into a dichotomous variable ("Doing Enough" or "Not Doing Enough"). I also omitted NA's.
+
+The independent variable is level of education, which ranges from "less than high school", "high school diploma", "some college", "Bachelors degree", and "graduate Education (MA or PhD)".
+
+Control variables are 
+
+Comparative barplots were also constructed to demonstrate the distribution of level of racial discomfort and attitudes about LGBT organizations' handling of racial issues conditional on educational attainment.
+
+Logistic regression models were used to measure the relationship between 1) level of education and racial discomfort; 2) level of education and attitudes about mainstream LGBT orgs handling of racial issues. All models included controls for political views, age (recoded as generation), gender identity, and race.
+
+
+
+
+```{r logistic reg models, echo=FALSE, include=FALSE, warning=FALSE, message="FALSE", fig.cap="caption"}
+
+#model predicting belief that mainstream LGBT orgs are not doing enough on racial equality
+model1<- lm((racialeq=="Not doing enough")~educ,data=SJS,family=binomial)
+round(summary(model1)$coef,3)
+
+#add control for political views
+model2<- lm((racialeq=="Not doing enough")~educ+politics,data=SJS,family=binomial)
+round(summary(model2)$coef,3)
+
+#add controls for age, gender, and race
+model3<- lm((racialeq=="Not doing enough")~educ+politics+age+gender+race,data=SJS,family=binomial)
+round(summary(model3)$coef,3)
+
+
+
+#model predicting level of discomfort due to race in LGBT commnity 
+model4<- lm((comfort=="Uncomfortable")~educ,data=SJS,family=binomial)
+round(summary(model4)$coef,3)
+
+#add control for political views
+model5<- lm((comfort=="Uncomfortable")~educ+politics,data=SJS,family=binomial)
+round(summary(model5)$coef,3)
+
+#add controls for age, gender, and race
+model6<- lm((comfort=="Uncomfortable")~educ+politics+age+gender+race,data=SJS,family=binomial)
+round(summary(model6)$coef,3)
+```
+
+
+
+#Results
+
+The first comparative barplot that demonstrates the distribution of the racialeq variable by level of education shows a strong pattern. The majority of those sampled with a high school degree or less believe that mainstream LGBT organizations are doing enough to address racial equality, while the majority of those with some college, Bachelors degrees, and graduate education were more likely to report that they thought mainstream LGBT organizations are not doing enough to address issues of racial equality.
+
+The second comparative barplot shows the distribution of the racial discomfort variable by level of education. It suggests a different pattern, indicating that, regardless of educational attainment, the majority of LGBT POC sampled reported feeling generally uncomfortable in the broader LGBT community because of their race.
+
+Logistic regression models (tables 1-3) measuring the relationship between educational attainment and the belief that LGBT organizations are not doing enough to address racial equality indicates a strong, positive association between these variables.Compared to those with less than a HS education, BA holders were 21 percent more likely to think LGBT organizations are not doing enough to address racial equality, and those with a graduate education were 30 percent more likely to thinl LGBT organizations are not doing enough to address racial equality, on average. This relationship remains statistically significant and consistent even after adding controls for political views, race, age, and gender.
+
+Logistics regression models (tables 4-5) measuring the relationship between educaitonal attainment and racial discomfort indicates no significant relationship. Compared to those with less than a high school education, BA holders were only 1.4 percent more likely to feel uncomfortable in LGBT spaces because of their race, and those with graduate education were 1.8 percent more likely to feel uncomfortable in LGBT spaces because of their race. This pattern remains after adding controls for political views, age, gender, and race.
+
+
+#Conclusion
+
+Using a sample of LGBTQ-identified people of color, I measure the relationship between level of education and feelings of racial discomfort, as well as beliefs about mainstream LGBT organizations' handling of racial issues among LGBTQ people of color. Interestingly, higher educational attainment is associated with the belief that mainstream LGBT organizations are not doing enough to address racial issues, even after controlling for demographic variables. This pattern may suggest that that college education among nonwhites might lead to a higher likelihood of politicization of their racial experience. This has been found in other studies (see Wodtke 2012). While those who have not accessed spaces of higher education still experience racism, perhaps they may not conceptualize their lived experiences through an explicitly racial lens, or perhaps they do not engage much with the LGBT commnunity in the first place.
+
+In contrast, level of education seems to have no relationship with racial discomfort in the LGBT community. Rather, the majority LGBTQ people of color report feelings of racial discomfort regardless of education, which is something worth noting. This suggests that the mainstream LGBT community may not be doing enough to include LGBTQ people of color.
+
 
 # References
+
+Acosta, Katie. 2013. Amigas Y Amantes : Sexually Nonconforming Latinas Negotiate Family. New Brunswick, N.J.: Rutgers University Press.
+
+Alimahomed, Sabrina. 2010. “Thinking Outside the Rainbow: Women of Color RedefiningQueer Politics and Identity.” Social Identities 16(2):151–68.
+
+Moore, Mingon. 2011. Invisible Families : Gay Identities, Relationships, and Motherhood Among Black Women. Berkeley, Calif.: University of California Press.
+
+Ocampo, Anthony C. 2014. “The Gay Second Generation: Sexual Identity and Family Relations of Filipino and Latino Gay Men”. Journal of Ethnic and Migration Studies. 40(1): 155-173
+
+Wodtke, Geoffrey T. 2012. The Impact of Education on Intergroup Attitudes: A Multiracial Analysis. Social Psychology Quarterly, 75(1), 80-106.
+
+
+
+
+```{r barplot1, echo=FALSE, warning=FALSE, message="FALSE", fig.cap="Barplot: Education and Beliefs About LGBT Orgs on Race"}
+
+#barplot showing LGBT POC views on mainstream LGBT orgs and race
+tab<-table(SJS$educ, SJS$racialeq)
+barplot(t(prop.table(tab,1.5)), beside=TRUE, ylim=c(0,1),ylab="Proportion", col=c("plum3","royalblue"),
+main="LGBT POC on Mainstream LGBT Organizations by Education")
+legend("topright", 1, 2, legend=c("LGBT Orgs Not Doing Enough to Address Racial Equality","LGBT Orgs Doing Enough to Address Racial Equality"), fill=c("plum3","royalblue"))
+
+
+
+```
+
+
+```{r barplot2, echo=FALSE, warning=FALSE, message="FALSE", fig.cap="Barplot: Education and Racial Comfort"}
+tab1<-table(SJS$educ, SJS$comfort)
+barplot(t(prop.table(tab1,1)), beside=TRUE, ylim=c(0,1),ylab="Proportion", col=c("seagreen","darksalmon"),
+main="LGBT POC Racial Comfort in LGBT Community by Education")
+legend("topright", 1, 2, legend=c("Uncomfortable","Comfortable"), fill=c("seagreen","darksalmon"))
+
+```
+
+```{r model tables, echo=FALSE, message=FALSE, results="asis", fig.cap="Models"}
+
+#model1: racialeq~educ (no controls)
+library(stargazer)
+stargazer(model1,header=FALSE,
+          type="latex", title="Model predicting belief that mainstream LGBT orgs are not doing enough on racial equality by education", dep.var.labels = "Not Doing Enough",digits=2,
+          covariate.labels = c("Less than HS","HS","Some college","Bachelors","Grad education"))
+
+
+#model2: racialeq~educ+politics
+library(stargazer)
+stargazer(model2,header=FALSE, omit=("politics"),
+          type="latex", title="Model predicting belief that mainstream LGBT orgs are not doing enough on racial equality by education controlling for politics", dep.var.labels = "Not Doing Enough",digits=2,
+          covariate.labels = c("Less than HS","HS","Some college","Bachelors","Grad education"))
+
+#model3: racialeq~educ+politics+age+gender+race
+library(stargazer)
+stargazer(model3,header=FALSE, omit=c("politics","race","age","gender"),
+          type="latex", title="Model predicting belief that mainstream LGBT orgs are not doing enough on racial equality by education controlling for politics, age, gender, race", dep.var.labels = "Not Doing Enough",digits=2,
+          covariate.labels = c("Less than HS","HS","Some college","Bachelors","Grad education"))
+
+#model4: comfort~educ
+library(stargazer)
+stargazer(model4,header=FALSE, 
+          type="latex", title="Model predicting racial discomfort for LGBT POC in general LGBT Community", dep.var.labels = "Uncomfortable in LGBT Community bc of Race",digits=2,
+          covariate.labels = c("Less than HS","HS","Some college","Bachelors","Grad education"))
+
+#model6: comfort~educ+politics+age+gender+race
+library(stargazer)
+stargazer(model6,header=FALSE, omit=c("politics","age","gender","race"),
+          type="latex", title="Model predicting racial discomfort for LGBT POC in general LGBT Community controlling for politics, age, gender, race", dep.var.labels = "Uncomfortable in LGBT Community bc of Race",digits=2,
+          covariate.labels = c("Less than HS","HS","Some college","Bachelors","Grad education"))
+
+```
+
+
